@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.test import Client
 from django.core import mail
 from django.contrib.auth import get_user_model
-from .models import Post, Group
+from .models import Post, Group, Follow
 import time
 from django.core.cache import cache
 from django.core.cache.utils import make_template_fragment_key
@@ -15,8 +15,8 @@ class TestProfile(TestCase):
         self.client = Client()
         self.user = User.objects.create_user(username='test', email='bk@gmail.com', password=12345)
         self.client.login(username='test', password=12345)
+        self.user2 = User.objects.create_user(username='second', email='second@gmail.com', password=8886777)
         
-
     def test_create_profile(self):
         response = self.client.get(f"/test/")
         self.assertEqual(response.status_code, 200)
@@ -59,21 +59,9 @@ class TestProfile(TestCase):
         response = self.client.get('/4865555/')
         self.assertEqual(response.status_code, 404)
     
-class TestUnauthorized(TestCase):
-    def setUp(self):
-        self.client = Client()
-    def test_new_post(self):
-        response = self.client.get('/new/', follow=True )
-        self.assertRedirects(response, '/auth/login/?next=/new/', status_code=302, target_status_code=200)
-
-
-
-class TestImg(TestCase):
-    def setUp(self):
-        self.client = Client()
-        self.user = User.objects.create_user(username='test', email='bk@gmail.com', password=12345)
-        self.client.login(username='test', password=12345)
+        
     def test_img_tag(self):
+
         group = Group.objects.create(title='title', slug='slug', description='description')
         with open('media/posts/original.jpg', 'rb') as fp:
             self.client.post("/new/", {'text': 'fred', 'group': group.pk, 'image': fp})
@@ -82,6 +70,7 @@ class TestImg(TestCase):
             for url in urls:
                 response = self.client.get(url)
                 self.assertContains(response, '<img ', status_code=200)
+
     def test_type_of_file(self):
         group = Group.objects.create(title='title', slug='slug', description='description')
         with open('media/VNZh.doc', 'rb') as fp:
@@ -91,14 +80,7 @@ class TestImg(TestCase):
             for url in urls:
                 response = self.client.get(url)
                 self.assertNotContains(response, '<img ', status_code=200)
-
-
-class TestCache(TestCase):
-    def setUp(self):
-        self.client = Client()
-        self.user = User.objects.create_user(username='test', email='bk@gmail.com', password=12345)
-        self.client.login(username='test', password=12345)
-        
+     
     def test_cache_index(self):
         self.client.post("/new/", {'text': 'Popescu',})
         response = self.client.get('/')
@@ -110,5 +92,19 @@ class TestCache(TestCase):
         response = self.client.get('/')
         self.assertContains(response, 'Stefan Cel Mare', html=False)
 
+    def test_subscribe_and_unsubscribe(self):
+        Post.objects.create(text='Terna', author=self.user2)
+        self.client.post(f'/{self.user2.username}/follow/')
+        follow = Follow.objects.filter(user=self.user, author=self.user2).count()
+        self.assertNotEqual(follow, 0)
+        self.client.post(f'/{self.user2.username}/unfollow/')
+        follow = Follow.objects.filter(user=self.user, author=self.user2).count()
+        self.assertEqual(follow, 0)
         
-        
+
+class TestUnauthorized(TestCase):
+    def setUp(self):
+        self.client = Client()
+    def test_new_post(self):
+        response = self.client.get('/new/', follow=True )
+        self.assertRedirects(response, '/auth/login/?next=/new/', status_code=302, target_status_code=200)

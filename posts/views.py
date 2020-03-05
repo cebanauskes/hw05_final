@@ -9,11 +9,13 @@ from django.views.decorators.cache import cache_page
 
 def index(request):
     post_list = Post.objects.order_by('-pub_date').all()
-    favorites = Follow.objects.filter(user=request.user).count()
-    if request.user.is_authenticated and favorites > 0 :
-        follow = True
-    else:
-        follow = False
+    if request.user.is_authenticated:
+        favorites = Follow.objects.filter(user=request.user).count()
+        if favorites > 0 :
+            follow = True
+        else:
+            follow = False
+    follow = False
     paginator = Paginator(post_list, 10)
     page_number = request.GET.get('page')
     page = paginator.get_page(page_number)
@@ -44,9 +46,12 @@ def new_post(request):
 def profile(request, username):
     profile = get_object_or_404(User, username=username)
     profile_post_list = Post.objects.filter(author=profile).order_by('-pub_date').all()
-    favorite = Follow.objects.filter(user=request.user, author=profile).count()
-    if request.user.is_authenticated and favorite > 0:
-        following = True
+    if request.user.is_authenticated:
+        favorite = Follow.objects.filter(user=request.user, author=profile).count()
+        if favorite > 0:
+            following = True
+        else:
+            following = False
     else:
         following = False
     posts_count = profile_post_list.count()
@@ -62,7 +67,7 @@ def post_view(request, username, post_id):
     post = get_object_or_404(Post, pk=post_id)
     comments = Comment.objects.filter(post=post).all()
     form = CommentForm()
-    return render(request, 'post.html', {'post': post, "profile": profile, 'posts_count': posts_count, 'form': form, 'items': comments})#
+    return render(request, 'post.html', {'post': post, "profile": profile, 'posts_count': posts_count, 'form': form, 'items': comments})
 
 def post_edit(request, username, post_id):
     profile = get_object_or_404(User, username=username)
