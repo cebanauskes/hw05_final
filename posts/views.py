@@ -11,11 +11,10 @@ def index(request):
     post_list = Post.objects.order_by('-pub_date').all()
     if request.user.is_authenticated:
         favorites = Follow.objects.filter(user=request.user).count()
-        if favorites > 0 :
+        if favorites > 0:
             follow = True
         else:
             follow = False
-    follow = False
     paginator = Paginator(post_list, 10)
     page_number = request.GET.get('page')
     page = paginator.get_page(page_number)
@@ -110,11 +109,6 @@ def add_comment(request, username, post_id):
 
 @login_required
 def follow_index(request):
-        #follow = Follow.objects.get(user=request.user)
-        #follow_list = Follow.objects.select_related('author', 'user').filter(user=request.user)#Список тех, на кого подписан юзер
-       # author_list = []
-        #for favorite in follow_list:
-            #author_list.append(favorite.author)
         post_list = Post.objects.filter(author__following__user=request.user).select_related('author').order_by('-pub_date').all()
         paginator = Paginator(post_list, 10)
         page_number = request.GET.get('page')
@@ -124,8 +118,12 @@ def follow_index(request):
 @login_required
 def profile_follow(request, username):
         follow = User.objects.get(username=username)#Тот, на кого подписываются
-        follower = User.objects.get(username=request.user.username)#Тот, кто подписывается
-        Follow.objects.create(user=follower, author=follow)
+        follower = User.objects.get(username=request.user.username)
+        favorite_object = Follow.objects.filter(user=follower, author=follow).count()
+        if favorite_object > 0:
+            pass
+        else:
+            Follow.objects.create(user=follower, author=follow)#Тот, кто подписывается
         return redirect('follow_index')
 
 
