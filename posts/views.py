@@ -10,11 +10,9 @@ from django.views.decorators.cache import cache_page
 def index(request):
     post_list = Post.objects.order_by('-pub_date').all()
     if request.user.is_authenticated:
-        favorites = Follow.objects.filter(user=request.user).count()
-        if favorites > 0:
-            follow = True
-        else:
-            follow = False
+        follow = Follow.objects.filter(user=request.user).count()
+    else:
+        follow = False
     paginator = Paginator(post_list, 10)
     page_number = request.GET.get('page')
     page = paginator.get_page(page_number)
@@ -46,11 +44,7 @@ def profile(request, username):
     profile = get_object_or_404(User, username=username)
     profile_post_list = Post.objects.filter(author=profile).order_by('-pub_date').all()
     if request.user.is_authenticated:
-        favorite = Follow.objects.filter(user=request.user, author=profile).count()
-        if favorite > 0:
-            following = True
-        else:
-            following = False
+        following = Follow.objects.filter(user=request.user, author=profile).count()
     else:
         following = False
     posts_count = profile_post_list.count()
@@ -120,9 +114,7 @@ def profile_follow(request, username):
         follow = User.objects.get(username=username)#Тот, на кого подписываются
         follower = User.objects.get(username=request.user.username)
         favorite_object = Follow.objects.filter(user=follower, author=follow).count()
-        if favorite_object > 0:
-            pass
-        else:
+        if not favorite_object:
             Follow.objects.create(user=follower, author=follow)#Тот, кто подписывается
         return redirect('follow_index')
 
